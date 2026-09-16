@@ -1,9 +1,12 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
+// Instantiated lazily, inside the function, rather than at module scope.
+// Next.js evaluates route modules during the build's static-analysis pass,
+// before any real env vars are guaranteed to be present — a top-level
+// `new Resend(...)` there throws and fails the whole build.
 export async function sendConfirmationEmail(opts: { to?: string | null; subject: string; html: string }) {
   if (!opts.to) return; // guests who didn't leave an email simply don't get one in v1
+  const resend = new Resend(process.env.RESEND_API_KEY);
   return resend.emails.send({
     from: process.env.EMAIL_FROM || "TeamSlots <notify@teamslots.app>",
     to: opts.to,
