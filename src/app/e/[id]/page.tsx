@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { AvailabilityGrid } from "@/components/AvailabilityGrid";
 import { candidateDates } from "@/lib/time";
@@ -25,13 +25,21 @@ export default function EventPage() {
   const [saving, setSaving] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [copied, setCopied] = useState(false);
+  const hasLoadedMineRef = useRef(false);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/events/${id}`, { cache: "no-store" });
     if (!res.ok) return;
     const json: EventData = await res.json();
     setData(json);
-    setMySlots(new Set(json.mySlotsUtc));
+    // Only seed "my" selections from the server on the very first load.
+    // Later polls (every 6s, so we pick up other participants' picks
+    // without a manual refresh) must NOT touch mySlots, or they'd wipe out
+    // whatever the user has painted locally but not saved yet.
+    if (!hasLoadedMineRef.current) {
+      setMySlots(new Set(json.mySlotsUtc));
+      hasLoadedMineRef.current = true;
+    }
     setName((n) => n || json.myName || "");
     setEmail((e) => e || json.myEmail || "");
   }, [id]);
