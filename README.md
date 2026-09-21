@@ -8,7 +8,7 @@
 - **PostgreSQL**，通过 Prisma 访问（推荐 [Supabase](https://supabase.com) 或 [Neon](https://neon.tech)，两者都有免费额度）
 - **NextAuth.js**，Google 登录同时获取 Calendar 授权
 - **googleapis**，读取 free/busy、写入确认后的日历事件
-- **Resend**，发送确认邮件
+- **Gmail SMTP**，用发起人自己的 Gmail 账号发确认邮件（免费，能发给任意收件人）
 
 ## 本地跑起来
 
@@ -21,7 +21,7 @@
    - "Credentials → Create OAuth client ID"，类型选 Web application，Authorized redirect URI 填：
      `http://localhost:3000/api/auth/callback/google`
    - 拿到 `Client ID` 和 `Client secret`
-3. **Resend**：注册 [resend.com](https://resend.com)，拿到 API Key。没有自己的域名也能用它给的测试发件域名跑通流程。
+3. **Gmail 应用专用密码**：Google 账号打开两步验证后，去 [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords) 生成一个应用专用密码。免费，且能发给任意收件人（不像 Resend 免费版没自己域名的话只能发给账号主人自己）。
 
 ### 2. 配置环境变量
 
@@ -71,7 +71,7 @@ src/
     time.ts                 时区换算的核心逻辑（务必先读这个文件）
     auth.ts                  NextAuth 配置（Google + Calendar 授权范围）
     googleCalendar.ts        free/busy 查询、写入确认后的日历事件
-    email.ts                 Resend 邮件发送 + 模板
+    email.ts                 Gmail SMTP 邮件发送 + 模板
     guest.ts                 匿名参与者的 cookie 身份
 prisma/schema.prisma          数据模型
 ```

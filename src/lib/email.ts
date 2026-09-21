@@ -1,14 +1,27 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
-// Instantiated lazily, inside the function, rather than at module scope.
+// Instantiated lazily, inside the function, rather than at module scope —
 // Next.js evaluates route modules during the build's static-analysis pass,
-// before any real env vars are guaranteed to be present — a top-level
-// `new Resend(...)` there throws and fails the whole build.
+// before any real env vars are guaranteed to be present, so a top-level
+// transporter creation there throws and fails the whole build.
+//
+// Sends via the organizer's own Gmail account (SMTP + an App Password) —
+// switched from Resend because Resend's free tier without a verified
+// custom domain can only deliver to the account owner's own inbox, which
+// defeats the point of notifying every participant. Sending as a real
+// Gmail account has no such restriction and costs nothing.
 export async function sendConfirmationEmail(opts: { to?: string | null; subject: string; html: string }) {
-  if (!opts.to) return; // guests who didn't leave an email simply don't get one in v1
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  return resend.emails.send({
-    from: process.env.EMAIL_FROM || "TeamSlots <notify@teamslots.app>",
+  if (!opts.to) return; // guests who opted out of email simply don't get one
+  const user = process.env.GMAIL_USER;
+  const pass = process.env.GMAIL_APP_PASSWORD;
+  if (!user || !pass) return; // email notifications are optional infra — silently skip if unconfigured
+
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: { user, pass },
+  });
+  return transporter.sendMail({
+    from: `TeamSlots <${user}>`,
     to: opts.to,
     subject: opts.subject,
     html: opts.html,
