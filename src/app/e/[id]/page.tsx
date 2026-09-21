@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { AvailabilityGrid } from "@/components/AvailabilityGrid";
 import { candidateDates } from "@/lib/time";
+import { useLocale } from "@/components/LocaleProvider";
 
 const PALETTE = ["#FF6B5B", "#F0A400", "#14B8A6", "#8B7FE8", "#EC4899", "#22C55E"];
 
@@ -16,6 +17,7 @@ type EventData = {
 
 export default function EventPage() {
   const { id } = useParams<{ id: string }>();
+  const { t } = useLocale();
   const [data, setData] = useState<EventData | null>(null);
   const [timezone, setTimezone] = useState("Asia/Singapore");
   const [mySlots, setMySlots] = useState<Set<string>>(new Set());
@@ -61,7 +63,7 @@ export default function EventPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name: name || "匿名参与者",
+        name: name || t("event.anonymous"),
         email: wantsEmail ? email : "",
         timezone,
         slotsUtc: Array.from(mySlots),
@@ -88,7 +90,7 @@ export default function EventPage() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  if (!data) return <div className="px-6 py-10 text-sm text-text-2">加载中…</div>;
+  if (!data) return <div className="px-6 py-10 text-sm text-text-2">{t("event.loading")}</div>;
 
   const dates = candidateDates(data.startDate, data.dayCount);
   const others = data.participants.map((p, i) => ({
@@ -101,25 +103,25 @@ export default function EventPage() {
         <div>
           <h1 className="text-lg font-semibold">{data.title}</h1>
           <div className="flex items-center gap-3 mt-1">
-            <span className="text-xs text-text-2">发起人：{data.ownerName}</span>
+            <span className="text-xs text-text-2">{t("event.ownerLabel")}{data.ownerName}</span>
             <button onClick={copyLink} className="text-xs text-text-2 hover:text-text border border-border rounded-md px-2 py-1">
-              {copied ? "已复制" : "复制链接邀请参与者"}
+              {copied ? t("event.copied") : t("event.copyLink")}
             </button>
           </div>
         </div>
         {!data.myParticipantId && data.status !== "confirmed" && (
           <div className="flex flex-col items-end gap-1.5">
             <div className="flex gap-2">
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="你的名字"
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("event.namePlaceholder")}
                 className="border border-border-strong rounded-md px-3 py-1.5 text-sm w-28" />
               {wantsEmail && (
-                <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="你的邮箱"
+                <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("event.emailPlaceholder")}
                   className="border border-border-strong rounded-md px-3 py-1.5 text-sm w-56" />
               )}
             </div>
             <label className="flex items-center gap-1.5 text-xs text-text-2 cursor-pointer">
               <input type="checkbox" checked={wantsEmail} onChange={(e) => setWantsEmail(e.target.checked)} />
-              时间确定后用邮件通知我（可选，不勾选也能正常参与）
+              {t("event.emailOptIn")}
             </label>
           </div>
         )}
@@ -148,7 +150,7 @@ export default function EventPage() {
             disabled={saving}
             className="bg-accent text-white rounded-md px-4 py-2 text-sm font-medium disabled:opacity-40"
           >
-            {saving ? "保存中…" : "保存我的空闲时间"}
+            {saving ? t("event.saving") : t("event.saveBtn")}
           </button>
         </div>
       )}

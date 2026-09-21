@@ -1,9 +1,11 @@
 "use client";
 import Link from "next/link";
 import { useSession, signIn, signOut } from "next-auth/react";
+import { useLocale } from "@/components/LocaleProvider";
 
 export function Header() {
   const { data: session } = useSession();
+  const { locale, setLocale, t } = useLocale();
 
   return (
     <header className="sticky top-0 z-30 h-14 border-b border-border bg-white/85 backdrop-blur flex items-center justify-between px-6">
@@ -18,19 +20,34 @@ export function Header() {
         TeamSlots
       </Link>
       <div className="flex items-center gap-3 text-sm">
+        <div className="flex items-center gap-1 text-xs border border-border rounded-md px-1.5 py-1">
+          <button
+            onClick={() => setLocale("zh")}
+            className={locale === "zh" ? "font-semibold text-text px-1" : "text-text-3 px-1 hover:text-text-2"}
+          >
+            中
+          </button>
+          <span className="text-border-strong">/</span>
+          <button
+            onClick={() => setLocale("en")}
+            className={locale === "en" ? "font-semibold text-text px-1" : "text-text-3 px-1 hover:text-text-2"}
+          >
+            EN
+          </button>
+        </div>
         <Link href="/history" className="text-text-2 hover:text-text px-2 py-1">
-          历史记录
+          {t("header.history")}
         </Link>
         {session?.user ? (
           <button onClick={() => signOut()} className="text-text-2 hover:text-text px-2 py-1">
-            {session.user.name} · 退出
+            {session.user.name} · {t("header.signout")}
           </button>
         ) : (
           <button
             onClick={() => signIn("google")}
             className="bg-accent text-white rounded-md px-3 py-1.5 font-medium"
           >
-            使用 Google 登录
+            {t("header.signin")}
           </button>
         )}
       </div>

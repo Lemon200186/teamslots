@@ -2,9 +2,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
+import { useLocale } from "@/components/LocaleProvider";
+
+const DURATIONS = [15, 30, 45, 60, 90, 120];
 
 export default function HomePage() {
   const { data: session } = useSession();
+  const { t } = useLocale();
   const [title, setTitle] = useState("Q3 增长复盘同步会");
   const [durationMinutes, setDurationMinutes] = useState(30);
   const [loading, setLoading] = useState(false);
@@ -30,10 +34,8 @@ export default function HomePage() {
         ))}
       </div>
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">新建一个排期事件</h1>
-        <p className="text-sm text-text-2 mt-1.5 leading-relaxed">
-          每个参与者打开链接后涂出自己的空闲时间，系统自动找出大家都合适的时段。
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("home.title")}</h1>
+        <p className="text-sm text-text-2 mt-1.5 leading-relaxed">{t("home.subtitle")}</p>
       </div>
 
       {!session?.user ? (
@@ -41,34 +43,34 @@ export default function HomePage() {
           onClick={() => signIn("google")}
           className="bg-accent text-white rounded-md px-4 py-2.5 text-sm font-medium"
         >
-          使用 Google 登录以创建事件
+          {t("home.signinCta")}
         </button>
       ) : (
         <>
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-text-2 font-medium">事件名称</label>
+            <label className="text-xs text-text-2 font-medium">{t("home.titleLabel")}</label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              placeholder={t("home.titlePlaceholder")}
               className="border border-border-strong rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
             />
           </div>
           <div className="bg-surface2 border border-border rounded-md px-3 py-2.5 text-sm text-text-2">
-            本周一至周日 · 全天 00:00–24:00 · 15 分钟一格
+            {t("home.dateRange")}
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-text-2 font-medium">会议时长（推荐时间会按这个时长找连续空档）</label>
+            <label className="text-xs text-text-2 font-medium">{t("home.durationLabel")}</label>
             <select
               value={durationMinutes}
               onChange={(e) => setDurationMinutes(Number(e.target.value))}
               className="border border-border-strong rounded-md px-3 py-2.5 text-sm bg-white"
             >
-              <option value={15}>15 分钟</option>
-              <option value={30}>30 分钟</option>
-              <option value={45}>45 分钟</option>
-              <option value={60}>60 分钟</option>
-              <option value={90}>90 分钟</option>
-              <option value={120}>120 分钟</option>
+              {DURATIONS.map((d) => (
+                <option key={d} value={d}>
+                  {t("home.durationOption", { n: d })}
+                </option>
+              ))}
             </select>
           </div>
           <button
@@ -76,7 +78,7 @@ export default function HomePage() {
             disabled={loading}
             className="bg-accent text-white rounded-md px-4 py-2.5 text-sm font-medium disabled:opacity-40"
           >
-            {loading ? "创建中…" : "生成分享链接"}
+            {loading ? t("home.creating") : t("home.createBtn")}
           </button>
         </>
       )}

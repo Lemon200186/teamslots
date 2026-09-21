@@ -1,6 +1,7 @@
 "use client";
 import { Fragment, useEffect, useMemo, useRef } from "react";
 import { slotToUtc, SLOT_MINUTES, SLOTS_PER_DAY } from "@/lib/time";
+import { useLocale } from "@/components/LocaleProvider";
 
 type Person = { id: string; name: string; color: string; slotsUtc: Set<string> };
 
@@ -24,11 +25,10 @@ const TIMEZONES = [
   "Asia/Singapore", "Asia/Shanghai", "Asia/Tokyo", "Europe/London",
   "America/New_York", "America/Los_Angeles", "Australia/Sydney",
 ];
-const WEEKDAY = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 
-function dayLabel(dateStr: string) {
+function dayLabel(dateStr: string, weekdays: string[]) {
   const d = new Date(dateStr + "T00:00:00Z");
-  return { name: WEEKDAY[d.getUTCDay()], date: `${d.getUTCMonth() + 1}/${d.getUTCDate()}` };
+  return { name: weekdays[d.getUTCDay()], date: `${d.getUTCMonth() + 1}/${d.getUTCDate()}` };
 }
 function slotClock(si: number) {
   const hh = String(Math.floor(si / 4)).padStart(2, "0");
@@ -40,6 +40,7 @@ export function AvailabilityGrid({
   candidateDates, timezone, onTimezoneChange, mySlots, onChangeMySlots,
   others, mode, onModeChange, readOnly, onConfirm, confirming, confirmedStartUtc, durationMinutes,
 }: Props) {
+  const { t, weekdays, dateLocale } = useLocale();
   const isPaintingRef = useRef(false);
   const paintAddRef = useRef(true);
 
@@ -135,7 +136,7 @@ export function AvailabilityGrid({
       <div className="flex items-center justify-between flex-wrap gap-3 px-4 py-3">
         <div className="flex flex-wrap gap-3.5">
           <span className="flex items-center gap-1.5 text-xs text-text-2">
-            <span className="w-2 h-2 rounded-full" style={{ background: "#0071E3" }} />你
+            <span className="w-2 h-2 rounded-full" style={{ background: "#0071E3" }} />{t("grid.you")}
           </span>
           {others.map((p) => (
             <span key={p.id} className="flex items-center gap-1.5 text-xs text-text-2">
@@ -156,13 +157,13 @@ export function AvailabilityGrid({
               onClick={() => onModeChange("mine")}
               className={`text-xs px-3 py-1.5 rounded ${mode === "mine" ? "bg-white shadow-sm text-text" : "text-text-2"}`}
             >
-              我的可用时间
+              {t("grid.myAvailability")}
             </button>
             <button
               onClick={() => onModeChange("heatmap")}
               className={`text-xs px-3 py-1.5 rounded ${mode === "heatmap" ? "bg-white shadow-sm text-text" : "text-text-2"}`}
             >
-              群组热力图
+              {t("grid.heatmap")}
             </button>
           </div>
         </div>
@@ -180,7 +181,7 @@ export function AvailabilityGrid({
         >
           <div className="sticky top-0 left-0 z-[4] bg-white border-b border-r border-border" />
           {candidateDates.map((date, di) => {
-            const { name, date: d } = dayLabel(date);
+            const { name, date: d } = dayLabel(date, weekdays);
             const full = keys[di].every((k) => mySlots.has(k));
             return (
               <div
@@ -193,7 +194,7 @@ export function AvailabilityGrid({
                     onClick={() => toggleDay(di)}
                     className="text-[10px] font-medium text-accent opacity-0 group-hover:opacity-100"
                   >
-                    {full ? "清空" : "全选"}
+                    {full ? t("grid.clear") : t("grid.selectAll")}
                   </button>
                 </div>
                 <div className="text-[11px] text-text-3 font-mono">{d}</div>
@@ -243,7 +244,7 @@ export function AvailabilityGrid({
                     <div
                       key={date}
                       className={`relative border-l border-border ${hourLine ? "border-t border-border" : ""}`}
-                      title={`${layers.length}/${totalPeople} 人有空`}
+                      title={t("grid.available", { count: layers.length, total: totalPeople })}
                     >
                       {layers.map((c, i) => (
                         <div key={i} className="absolute inset-0" style={{ background: c, opacity: 0.5, mixBlendMode: "multiply" }} />
@@ -260,19 +261,19 @@ export function AvailabilityGrid({
       <div className="px-4 py-3.5 border-t border-border">
         {confirmedStartUtc ? (
           <span className="text-sm text-[#1AAE7A] font-medium">
-            ✓ 已确认：
-            {new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium", timeStyle: "short", timeZone: timezone }).format(
+            {t("grid.confirmedLabel")}
+            {new Intl.DateTimeFormat(dateLocale, { dateStyle: "medium", timeStyle: "short", timeZone: timezone }).format(
               new Date(confirmedStartUtc)
             )}
           </span>
         ) : candidates.length > 0 ? (
           <div className="flex flex-col gap-2">
             <div className="text-xs text-text-2 font-medium">
-              推荐时间 · 按 {durationMinutes} 分钟会议时长找连续空档，按重合人数排序
+              {t("grid.recommended", { duration: durationMinutes })}
             </div>
             <div className="flex flex-col gap-1.5">
               {candidates.map((c, i) => {
-                const startLabel = `${dayLabel(candidateDates[c.di]).name} ${dayLabel(candidateDates[c.di]).date} ${slotClock(c.si)}`;
+                const startLabel = `${dayLabel(candidateDates[c.di], weekdays).name} ${dayLabel(candidateDates[c.di], weekdays).date} ${slotClock(c.si)}`;
                 const endSi = c.si + slotsNeeded;
                 const endLabel = endSi >= SLOTS_PER_DAY ? "24:00" : slotClock(endSi);
                 const startUtc = keys[c.di][c.si];
@@ -285,18 +286,18 @@ export function AvailabilityGrid({
                     <span className="text-sm">
                       <span className="text-text-3 font-mono mr-2">#{i + 1}</span>
                       <b className="font-mono">{startLabel}–{endLabel}</b>
-                      <span className="text-text-2"> · {c.count}/{totalPeople} 人有空</span>
+                      <span className="text-text-2"> · {t("grid.available", { count: c.count, total: totalPeople })}</span>
                     </span>
                     {onConfirm && (
                       <button
                         disabled={confirming}
                         onClick={() => {
-                          if (!window.confirm(`确定要把会议时间锁定为 ${startLabel}–${endLabel} 吗？这个操作会立刻通知所有参与者，且无法撤销。`)) return;
+                          if (!window.confirm(t("grid.confirmDialog", { label: `${startLabel}–${endLabel}` }))) return;
                           onConfirm(startUtc, endUtc);
                         }}
                         className="shrink-0 border border-[#E0A100] text-[#8A6200] bg-[#FFF8E6] rounded-md px-3 py-1.5 text-xs font-medium disabled:opacity-40 hover:bg-[#FFF1CC]"
                       >
-                        {confirming ? "确认中…" : "确认这个时间"}
+                        {confirming ? t("grid.confirming") : t("grid.confirmBtn")}
                       </button>
                     )}
                   </div>
@@ -305,7 +306,7 @@ export function AvailabilityGrid({
             </div>
           </div>
         ) : (
-          <span className="text-sm text-text-2">涂出你的空闲时间，看看和大家的交集</span>
+          <span className="text-sm text-text-2">{t("grid.emptyHint")}</span>
         )}
       </div>
     </div>
