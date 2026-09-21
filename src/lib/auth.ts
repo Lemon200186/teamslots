@@ -25,23 +25,6 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   session: { strategy: "database" },
-  // Temporary: NextAuth swallows the real error behind a generic
-  // error=OAuthCallback redirect unless debug/logger is on — turning this
-  // on so the actual cause (token exchange, adapter write, etc.) shows up
-  // in the Netlify function logs instead of vanishing. Safe to remove once
-  // login is confirmed working end-to-end.
-  debug: true,
-  logger: {
-    error(code, metadata) {
-      console.error("[next-auth][error]", code, metadata);
-    },
-    warn(code) {
-      console.warn("[next-auth][warn]", code);
-    },
-    debug(code, metadata) {
-      console.log("[next-auth][debug]", code, metadata);
-    },
-  },
   callbacks: {
     async session({ session, user }) {
       if (session.user) (session.user as { id?: string }).id = user.id;
