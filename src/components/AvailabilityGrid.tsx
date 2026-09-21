@@ -17,6 +17,7 @@ interface Props {
   onConfirm?: (startUtc: string, endUtc: string) => void;
   confirming?: boolean;
   confirmedStartUtc?: string | null;
+  durationMinutes: number;
 }
 
 const TIMEZONES = [
@@ -37,7 +38,7 @@ function slotClock(si: number) {
 
 export function AvailabilityGrid({
   candidateDates, timezone, onTimezoneChange, mySlots, onChangeMySlots,
-  others, mode, onModeChange, readOnly, onConfirm, confirming, confirmedStartUtc,
+  others, mode, onModeChange, readOnly, onConfirm, confirming, confirmedStartUtc, durationMinutes,
 }: Props) {
   const isPaintingRef = useRef(false);
   const paintAddRef = useRef(true);
@@ -60,18 +61,47 @@ export function AvailabilityGrid({
     [candidateDates, timezone]
   );
 
-  const best = useMemo(() => {
-    let top: { di: number; si: number; count: number } | null = null;
+  const slotsNeeded = Math.max(1, Math.round(durationMinutes / SLOT_MINUTES));
+
+  // Ranked list of candidate meeting windows — each is a *continuous* block
+  // of `slotsNeeded` slots (not a single 15-min cell), since a lone
+  // overlapping slot is close to meaningless once there are more than a
+  // couple of people: it almost never survives into an actual meeting
+  // length. We also drop any candidate that overlaps a higher-ranked one on
+  // the same day, so the list doesn't just show five shifted-by-15-minutes
+  // versions of the same window.
+  const candidates = useMemo(() => {
+    type Candidate = { di: number; si: number; count: number };
+    const raw: Candidate[] = [];
     for (let di = 0; di < candidateDates.length; di++) {
-      for (let si = 0; si < SLOTS_PER_DAY; si++) {
-        const key = keys[di][si];
-        let count = mySlots.has(key) ? 1 : 0;
-        for (const p of others) if (p.slotsUtc.has(key)) count++;
-        if (!top || count > top.count) top = { di, si, count };
+      for (let si = 0; si + slotsNeeded <= SLOTS_PER_DAY; si++) {
+        let count = 0;
+        let mineOk = true;
+        for (let k = si; k < si + slotsNeeded; k++) {
+          if (!mySlots.has(keys[di][k])) { mineOk = false; break; }
+        }
+        if (mineOk) count++;
+        for (const p of others) {
+          let ok = true;
+          for (let k = si; k < si + slotsNeeded; k++) {
+            if (!p.slotsUtc.has(keys[di][k])) { ok = false; break; }
+          }
+          if (ok) count++;
+        }
+        if (count > 0) raw.push({ di, si, count });
       }
     }
-    return top;
-  }, [keys, mySlots, others, candidateDates.length]);
+    raw.sort((a, b) => b.count - a.count || a.di - b.di || a.si - b.si);
+    const picked: Candidate[] = [];
+    for (const c of raw) {
+      const overlaps = picked.some(
+        (p) => p.di === c.di && c.si < p.si + slotsNeeded && p.si < c.si + slotsNeeded
+      );
+      if (!overlaps) picked.push(c);
+      if (picked.length >= 5) break;
+    }
+    return picked;
+  }, [keys, mySlots, others, candidateDates.length, slotsNeeded]);
 
   function toggle(key: string, add: boolean) {
     const next = new Set(mySlots);
@@ -227,7 +257,7 @@ export function AvailabilityGrid({
         </div>
       </div>
 
-      <div className="flex items-center justify-between flex-wrap gap-3 px-4 py-3 border-t border-border">
+      <div className="px-4 py-3.5 border-t border-border">
         {confirmedStartUtc ? (
           <span className="text-sm text-[#1AAE7A] font-medium">
             ✓ 已确认：
@@ -235,33 +265,47 @@ export function AvailabilityGrid({
               new Date(confirmedStartUtc)
             )}
           </span>
-        ) : best && best.count > 0 ? (
-          <span className="text-sm">
-            最佳时间：
-            <b className="font-mono">
-              {dayLabel(candidateDates[best.di]).name} {dayLabel(candidateDates[best.di]).date} {slotClock(best.si)}
-            </b>{" "}
-            · {best.count}/{totalPeople} 人有空
-          </span>
+        ) : candidates.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            <div className="text-xs text-text-2 font-medium">
+              推荐时间 · 按 {durationMinutes} 分钟会议时长找连续空档，按重合人数排序
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {candidates.map((c, i) => {
+                const startLabel = `${dayLabel(candidateDates[c.di]).name} ${dayLabel(candidateDates[c.di]).date} ${slotClock(c.si)}`;
+                const endSi = c.si + slotsNeeded;
+                const endLabel = endSi >= SLOTS_PER_DAY ? "24:00" : slotClock(endSi);
+                const startUtc = keys[c.di][c.si];
+                const endUtc = new Date(new Date(startUtc).getTime() + durationMinutes * 60000).toISOString();
+                return (
+                  <div
+                    key={`${c.di}-${c.si}`}
+                    className="flex items-center justify-between gap-3 rounded-md bg-surface2 px-3 py-2"
+                  >
+                    <span className="text-sm">
+                      <span className="text-text-3 font-mono mr-2">#{i + 1}</span>
+                      <b className="font-mono">{startLabel}–{endLabel}</b>
+                      <span className="text-text-2"> · {c.count}/{totalPeople} 人有空</span>
+                    </span>
+                    {onConfirm && (
+                      <button
+                        disabled={confirming}
+                        onClick={() => {
+                          if (!window.confirm(`确定要把会议时间锁定为 ${startLabel}–${endLabel} 吗？这个操作会立刻通知所有参与者，且无法撤销。`)) return;
+                          onConfirm(startUtc, endUtc);
+                        }}
+                        className="shrink-0 border border-[#E0A100] text-[#8A6200] bg-[#FFF8E6] rounded-md px-3 py-1.5 text-xs font-medium disabled:opacity-40 hover:bg-[#FFF1CC]"
+                      >
+                        {confirming ? "确认中…" : "确认这个时间"}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         ) : (
           <span className="text-sm text-text-2">涂出你的空闲时间，看看和大家的交集</span>
-        )}
-
-        {onConfirm && !confirmedStartUtc && (
-          <button
-            disabled={!best || best.count === 0 || confirming}
-            onClick={() => {
-              if (!best) return;
-              const startUtc = keys[best.di][best.si];
-              const endUtc = new Date(new Date(startUtc).getTime() + SLOT_MINUTES * 60000).toISOString();
-              const label = `${dayLabel(candidateDates[best.di]).name} ${dayLabel(candidateDates[best.di]).date} ${slotClock(best.si)}`;
-              if (!window.confirm(`确定要把会议时间锁定为 ${label} 吗？这个操作会立刻通知所有参与者，且无法撤销。`)) return;
-              onConfirm(startUtc, endUtc);
-            }}
-            className="border border-[#E0A100] text-[#8A6200] bg-[#FFF8E6] rounded-md px-4 py-2 text-sm font-medium disabled:opacity-40 hover:bg-[#FFF1CC]"
-          >
-            {confirming ? "确认中…" : "确认这个时间"}
-          </button>
         )}
       </div>
     </div>

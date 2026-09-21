@@ -14,6 +14,10 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => ({}));
   const title = String(body.title || "未命名会议").slice(0, 120);
+  const allowedDurations = [15, 30, 45, 60, 90, 120];
+  const durationMinutes = allowedDurations.includes(Number(body.durationMinutes))
+    ? Number(body.durationMinutes)
+    : 30;
 
   const event = await prisma.event.create({
     data: {
@@ -22,6 +26,7 @@ export async function POST(req: Request) {
       startDate: body.startDate || mondayOfThisWeek(),
       dayCount: 7,
       slotMinutes: 15,
+      durationMinutes,
     },
   });
 

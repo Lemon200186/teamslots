@@ -6,6 +6,7 @@ import { useSession, signIn } from "next-auth/react";
 export default function HomePage() {
   const { data: session } = useSession();
   const [title, setTitle] = useState("Q3 增长复盘同步会");
+  const [durationMinutes, setDurationMinutes] = useState(30);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -14,7 +15,7 @@ export default function HomePage() {
     const res = await fetch("/api/events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title }),
+      body: JSON.stringify({ title, durationMinutes }),
     });
     const data = await res.json();
     setLoading(false);
@@ -54,6 +55,21 @@ export default function HomePage() {
           </div>
           <div className="bg-surface2 border border-border rounded-md px-3 py-2.5 text-sm text-text-2">
             本周一至周日 · 全天 00:00–24:00 · 15 分钟一格
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs text-text-2 font-medium">会议时长（推荐时间会按这个时长找连续空档）</label>
+            <select
+              value={durationMinutes}
+              onChange={(e) => setDurationMinutes(Number(e.target.value))}
+              className="border border-border-strong rounded-md px-3 py-2.5 text-sm bg-white"
+            >
+              <option value={15}>15 分钟</option>
+              <option value={30}>30 分钟</option>
+              <option value={45}>45 分钟</option>
+              <option value={60}>60 分钟</option>
+              <option value={90}>90 分钟</option>
+              <option value={120}>120 分钟</option>
+            </select>
           </div>
           <button
             onClick={createEvent}

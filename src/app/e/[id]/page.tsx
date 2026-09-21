@@ -8,7 +8,7 @@ const PALETTE = ["#FF6B5B", "#F0A400", "#14B8A6", "#8B7FE8", "#EC4899", "#22C55E
 
 type EventData = {
   id: string; title: string; ownerName: string; isOwner: boolean;
-  startDate: string; dayCount: number; status: string;
+  startDate: string; dayCount: number; status: string; durationMinutes: number;
   confirmedStartUtc: string | null;
   myParticipantId: string | null; mySlotsUtc: string[]; myName: string; myEmail: string;
   participants: { id: string; name: string; slotsUtc: string[] }[];
@@ -115,6 +115,7 @@ export default function EventPage() {
         onConfirm={data.isOwner ? confirm : undefined}
         confirming={confirming}
         confirmedStartUtc={data.confirmedStartUtc}
+        durationMinutes={data.durationMinutes}
       />
 
       {data.status !== "confirmed" && (

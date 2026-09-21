@@ -82,6 +82,12 @@ model Event {
   startDate   String
   dayCount    Int    @default(7)
   slotMinutes Int    @default(15)
+  // How long the meeting actually needs to be — the recommendation logic
+  // looks for a *continuous* window of this length where people overlap,
+  // not just a single 15-minute slot (a single overlapping slot is close
+  // to useless once you have >2 people, since it rarely survives into a
+  // real meeting).
+  durationMinutes Int @default(30)
 
   confirmedStartUtc DateTime?
   confirmedEndUtc   DateTime?

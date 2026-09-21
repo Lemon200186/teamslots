@@ -33,6 +33,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     startDate: event.startDate,
     dayCount: event.dayCount,
     slotMinutes: event.slotMinutes,
+    durationMinutes: event.durationMinutes,
     status: event.status,
     confirmedStartUtc: event.confirmedStartUtc,
     confirmedEndUtc: event.confirmedEndUtc,
