@@ -22,6 +22,7 @@ export default function EventPage() {
   const [mode, setMode] = useState<"mine" | "heatmap">("mine");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [wantsEmail, setWantsEmail] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -42,6 +43,7 @@ export default function EventPage() {
     }
     setName((n) => n || json.myName || "");
     setEmail((e) => e || json.myEmail || "");
+    if (json.myEmail) setWantsEmail(true);
   }, [id]);
 
   useEffect(() => {
@@ -58,7 +60,12 @@ export default function EventPage() {
     await fetch(`/api/events/${id}/availability`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name || "匿名参与者", email, timezone, slotsUtc: Array.from(mySlots) }),
+      body: JSON.stringify({
+        name: name || "匿名参与者",
+        email: wantsEmail ? email : "",
+        timezone,
+        slotsUtc: Array.from(mySlots),
+      }),
     });
     setSaving(false);
     load();
@@ -101,11 +108,19 @@ export default function EventPage() {
           </div>
         </div>
         {!data.myParticipantId && data.status !== "confirmed" && (
-          <div className="flex gap-2">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="你的名字"
-              className="border border-border-strong rounded-md px-3 py-1.5 text-sm w-28" />
-            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="邮箱（用于接收确认通知，可选）"
-              className="border border-border-strong rounded-md px-3 py-1.5 text-sm w-56" />
+          <div className="flex flex-col items-end gap-1.5">
+            <div className="flex gap-2">
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="你的名字"
+                className="border border-border-strong rounded-md px-3 py-1.5 text-sm w-28" />
+              {wantsEmail && (
+                <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="你的邮箱"
+                  className="border border-border-strong rounded-md px-3 py-1.5 text-sm w-56" />
+              )}
+            </div>
+            <label className="flex items-center gap-1.5 text-xs text-text-2 cursor-pointer">
+              <input type="checkbox" checked={wantsEmail} onChange={(e) => setWantsEmail(e.target.checked)} />
+              时间确定后用邮件通知我（可选，不勾选也能正常参与）
+            </label>
           </div>
         )}
       </div>

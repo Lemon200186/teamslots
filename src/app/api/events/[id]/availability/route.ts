@@ -15,7 +15,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const body = await req.json().catch(() => ({}));
   const name = String(body.name || session?.user?.name || "匿名参与者").slice(0, 60);
-  const email = body.email || session?.user?.email || null;
+  // "" is an explicit opt-out (the "email notifications" checkbox was left
+  // unchecked) and must NOT fall back to the signed-in user's Google email —
+  // only an *omitted* field (undefined) falls back to that default.
+  const email = body.email === "" ? null : body.email || session?.user?.email || null;
   const timezone = String(body.timezone || "Asia/Singapore");
   const slotsUtc: string[] = Array.isArray(body.slotsUtc) ? body.slotsUtc : [];
 
