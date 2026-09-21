@@ -16,6 +16,12 @@ model Account {
   provider          String
   providerAccountId String
   refresh_token     String? @db.Text
+  // Google added this field to its OAuth token response at some point;
+  // NextAuth passes whatever the provider returns straight through to the
+  // adapter, so an unrecognized column here makes Prisma reject the whole
+  // linkAccount() write with a validation error (which is exactly what was
+  // silently breaking every first-time Google login).
+  refresh_token_expires_in Int?
   access_token      String? @db.Text
   expires_at        Int?
   token_type        String?
