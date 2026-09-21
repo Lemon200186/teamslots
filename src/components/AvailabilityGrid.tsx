@@ -254,9 +254,11 @@ export function AvailabilityGrid({
               if (!best) return;
               const startUtc = keys[best.di][best.si];
               const endUtc = new Date(new Date(startUtc).getTime() + SLOT_MINUTES * 60000).toISOString();
+              const label = `${dayLabel(candidateDates[best.di]).name} ${dayLabel(candidateDates[best.di]).date} ${slotClock(best.si)}`;
+              if (!window.confirm(`确定要把会议时间锁定为 ${label} 吗？这个操作会立刻通知所有参与者，且无法撤销。`)) return;
               onConfirm(startUtc, endUtc);
             }}
-            className="bg-accent text-white rounded-md px-4 py-2 text-sm font-medium disabled:opacity-40"
+            className="border border-[#E0A100] text-[#8A6200] bg-[#FFF8E6] rounded-md px-4 py-2 text-sm font-medium disabled:opacity-40 hover:bg-[#FFF1CC]"
           >
             {confirming ? "确认中…" : "确认这个时间"}
           </button>
